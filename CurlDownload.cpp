@@ -53,6 +53,6 @@ long GetFileSize(const std::string& url)
 int main()
 {
 	Download download;
-    download.SetInfo("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b", "image.png", GetFileSize("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b"),128);
+    download.SetInfo("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b", "image.png", GetFileSize("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b"),2);
     download.start();
 }
