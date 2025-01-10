@@ -1,8 +1,12 @@
 ﻿#include <iostream>
 #include <curl/curl.h>
+#include<string>
 #include "Download.h"
 
 #pragma warning(disable : 4996)
+
+using namespace std;
+
 
 char* strToChar(std::string strSend)
 {
@@ -13,6 +17,66 @@ char* strToChar(std::string strSend)
 	return ConvertData;
 }
 
+
+int main()
+{
+	Download download;
+    download.SetInfo("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b", "image.png", GetFileSize("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b"),1);
+    download.start();
+
+
+	return 0;
+}
+/*
+#include <iostream>
+#include <fstream>
+#include <curl/curl.h>
+
+// 写入数据的回调函数
+size_t WriteData(void* ptr, size_t size, size_t nmemb, std::ofstream* stream)
+{
+    stream->write(static_cast<char*>(ptr), size * nmemb);
+    return size * nmemb;
+}
+
+// 分段下载函数
+bool DownloadSegment(const std::string& url, std::ofstream& output, long start, long end)
+{
+    CURL* curl;
+    CURLcode res;
+    curl = curl_easy_init();
+    if (curl) {
+        // 设置URL
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
+        // 设置Range头
+        std::string range = std::to_string(start) + "-" + std::to_string(end);
+        curl_easy_setopt(curl, CURLOPT_RANGE, range.c_str());
+
+        // 设置写入数据的回调函数
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteData);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &output);
+
+        // 设置SSL选项
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 验证服务器的SSL证书
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // 验证证书上的主机名
+
+        // 执行请求
+        res = curl_easy_perform(curl);
+
+        // 清理
+        curl_easy_cleanup(curl);
+
+        if (res != CURLE_OK) {
+            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+// 获取文件大小
 long GetFileSize(const std::string& url)
 {
     CURL* curl;
@@ -28,8 +92,6 @@ long GetFileSize(const std::string& url)
         // 设置SSL选项
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 验证服务器的SSL证书
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // 验证证书上的主机名
-
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
         res = curl_easy_perform(curl);
 
@@ -50,9 +112,46 @@ long GetFileSize(const std::string& url)
     return -1;
 }
 
-int main()
-{
-	Download download;
-    download.SetInfo("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b", "image.png", GetFileSize("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b"),2);
-    download.start();
+int main() {
+    std::string url = "https://img.linux.net.cn/lfs/LFS-BOOK-7.7-systemd.pdf"; // 替换为实际URL
+    std::string output_filename = "LFS-BOOK-7.7-systemd.pdf";
+    long segment_size = 1024 * 1024; // 1MB
+
+    // 获取文件大小
+    long file_size = GetFileSize(url);
+    if (file_size == -1) {
+        std::cerr << "Failed to get file size." << std::endl;
+        return 1;
+    }
+
+    std::cout << "File size: " << file_size << " bytes" << std::endl;
+
+    // 打开输出文件
+    std::ofstream output(output_filename, std::ios::binary);
+    if (!output.is_open()) {
+        std::cerr << "Failed to open output file." << std::endl;
+        return 1;
+    }
+
+    // 分段下载
+    for (long start = 0; start < file_size; start += segment_size) {
+        long end = start + segment_size - 1;
+        if (end >= file_size) {
+            end = file_size - 1;
+        }
+        std::cout << "Downloading segment: " << start << "-" << end << std::endl;
+        if (!DownloadSegment(url, output, start, end)) {
+            std::cerr << "Failed to download segment." << std::endl;
+            output.close();
+            return 1;
+        }
+    }
+
+    // 关闭输出文件
+    output.close();
+    std::cout << "Download complete." << std::endl;
+
+    return 0;
 }
+
+*/

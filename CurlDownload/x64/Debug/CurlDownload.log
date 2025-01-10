@@ -1,0 +1,5 @@
+﻿  CurlDownload.cpp
+D:\CurlDownload\CurlDownload.cpp(14,33): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+D:\CurlDownload\CurlDownload.cpp(14,17): warning C4267: “初始化”: 从“size_t”转换到“const int”，可能丢失数据
+E:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\include\type_traits(1721,77): warning C4244: “参数”: 从“__int64”转换到“long”，可能丢失数据
+  CurlDownload.vcxproj -> D:\CurlDownload\x64\Debug\CurlDownload.exe
