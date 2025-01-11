@@ -47,6 +47,30 @@ size_t WriteData(void* ptr, size_t size, size_t nmemb, std::ofstream* stream)
 	return size * nmemb;
 }
 
+bool mergeFiles(const std::string& file1, const std::string& file2) {
+	std::ifstream inFile1(file1, std::ios::binary);
+	std::ifstream inFile2(file2, std::ios::binary);
+	std::ofstream outFile(file1, std::ios::binary | std::ios::app);
+	if (!inFile1.is_open() ) {
+		cout << "Merge:Cannot open the files(inFile1)." << endl;
+		return false;
+	}
+	if (!inFile2.is_open()) {
+		cout << "Merge:Cannot open the files(inFile2)." << endl;
+		return false;
+	}
+	if (!outFile.is_open()) {
+		cout << "Merge:Cannot open the files(outFile)." << endl;
+		return false;
+	}
+	// 将第二个文件的内容追加到第一个文件
+	outFile << inFile2.rdbuf();
+	inFile1.close();
+	inFile2.close();
+	outFile.close();
+	return true;
+}
+
 class Download {
 
 private:
@@ -107,7 +131,7 @@ public:
 				std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
 				return false;
 			}
-
+			output.close();
 			threadEnd.push_back(id);
 			return true;
 		}
@@ -115,9 +139,10 @@ public:
 	}
 	void ThreadCheck() {
 		threadEnd.clear();
+		int oksum = 0;
 		int nowThread = 0;
         long long begin = 0, end = 0;
-        long long segment_size = 1024*15;
+        long long segment_size = 1024*10;
 		int nowID = 1;
 		bool last = false;
 		while (true) {
@@ -136,13 +161,29 @@ public:
 				nowThread++;
 			}
 			for (int i = 0; i < threadEnd.size(); i++) {
-				cout<<threadEnd[i]<<"is End." << endl;
+				cout<<threadEnd[i]<<" is End." << endl;
 				nowThread--;
-				threadEnd.erase(threadEnd.begin() + threadEnd[i] -1);
-				threads.erase(threads.begin() );
+				oksum++;
+				threadEnd.erase(threadEnd.begin() + i);
+				//threads.erase(threads.begin() + threadEnd[i] - 1);
 			}
 			
+			if (oksum >= 3) {
+				break;
+			}
 		}
+		Sleep(2000);
+		cout << "Merge file." << endl;
+		
+		for (int i = 1; i <= nowID-1; i++) {
+			cout<<filename + "." + to_string(i) + ".CurlDownload"<<endl;
+			string next = filename + "." + to_string(i) + ".CurlDownload";
+			if (mergeFiles(filename, next) == false) {
+				cout << "Merge Error." << endl;
+				exit(0);
+			}
+		}
+		cout<<"Download Finish."<<endl;
 	}
 	void start() {
 		if (!IsSet) {
