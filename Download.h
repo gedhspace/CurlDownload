@@ -56,9 +56,9 @@ private:
 	bool IsSet = false;
 	int threadMax=64;
     vector<thread> threads;
-	bool isEnd[5000];
-public:
 	
+public:
+	vector<int> threadEnd;
 	void SetInfo(string surl, string sfilename, long long ssize = 0,int smax=64) {
 		url = surl;
 		filename= sfilename;
@@ -107,34 +107,39 @@ public:
 				std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
 				return false;
 			}
+
+			threadEnd.push_back(id);
 			return true;
 		}
 		return false;
 	}
 	void ThreadCheck() {
-		memset(isEnd, false, sizeof(isEnd));
+		threadEnd.clear();
 		int nowThread = 0;
         long long begin = 0, end = 0;
-        long long segment_size = 1024*1024;
+        long long segment_size = 1024*15;
 		int nowID = 1;
 		bool last = false;
 		while (true) {
-			if (nowThread < threadMax &&threads.size()<=1000) {
-			
+			if (threads.size()<threadMax&&!last) {
                 end = begin + segment_size - 1;
                 if (end >= size) {
 					end = size - 1;
 					last = true;
-					cout << end << endl;
+					//cout << end << endl;
 				}
 				cout << begin << "-" << end << endl;
 				threads.push_back(thread(&Download::DownloadSegment,this, begin, end, nowID));
-				
                 threads[threads.size()-1].detach();
-				
 				nowID++;
                 begin+=segment_size;
 				nowThread++;
+			}
+			for (int i = 0; i < threadEnd.size(); i++) {
+				cout<<threadEnd[i]<<"is End." << endl;
+				nowThread--;
+				threadEnd.erase(threadEnd.begin() + threadEnd[i] -1);
+				threads.erase(threads.begin() );
 			}
 			
 		}
