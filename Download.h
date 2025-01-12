@@ -3,9 +3,13 @@
 #include<string>
 #include <iostream>
 #include<thread>
+#include <cstdio>
 #include <vector>
 #include<map>
 #include <fstream>
+#include<windows.h>
+#define PATH_SEPARATOR '/'
+#define PATH_SEPARATOR '\\'
 
 #pragma warning(disable : 4996)
 
@@ -73,28 +77,50 @@ bool mergeFiles(const std::string& file1, const std::string& file2) {
 	return true;
 }
 
+void rmfile(char path[]) {
+	for (int i = 0; path[i]; i++) {
+		if (path[i] == '/') {
+			path[i] = PATH_SEPARATOR;
+		}
+	}
+	char mkdir_command[1024];
+	sprintf(mkdir_command, "del %s", path);
+	system(mkdir_command);
+}
+char* appedd(const char* a, const char* b) {
+	const char* str1 = a;
+	const char* str2 = b;
+	size_t len1 = strlen(str1);
+	size_t len2 = strlen(str2);
+	size_t new_length = len1 + len2 + 1;
+	char* result = new char[new_length];
+	strcpy(result, str1);
+	strcat(result, str2);
+	return result;
+}
+
 class Download {
 
 private:
-	string url;
-	string filename;
+	std::string url;
+	std::string filename;
 	long long size;
 	bool IsSet = false;
-	int threadMax=64;
-    map<int,thread> threads;
-	
+	int threadMax = 64;
+	std::map<int, thread> threads;
+	bool isok;
 public:
 	vector<int> threadEnd;
-	void SetInfo(string surl, string sfilename, long long ssize = 0,int smax=64) {
+	void SetInfo(std::string surl, std::string sfilename, long long ssize = 0, int smax = 64) {
 		url = surl;
-		filename= sfilename;
-		size= ssize;
+		filename = sfilename;
+		size = ssize;
 		threadMax = smax;
 		IsSet = true;
 	}
-	bool DownloadSegment(long start, long end,int id){
-		this_thread::sleep_for(std::chrono::seconds(5));
-		ofstream output(filename + "." + to_string(id) , std::ios::binary);
+	bool DownloadSegment(long start, long end, int id) {
+		std::this_thread::sleep_for(std::chrono::seconds(5));
+		std::ofstream output(filename + "." + std::to_string(id) + ".CurlDownload", std::ios::binary);
 		//cout << filename + "." + to_string(id) + ".CurlDownload" << endl;
 		//cout << start << "-" << end << endl;
 
@@ -102,13 +128,13 @@ public:
 			std::cerr << "Failed to open output file." << std::endl;
 			return 1;
 		}
-		
+
 		CURL* curl;
 		CURLcode res;
 		curl = curl_easy_init();
 		if (curl) {
 			// ÉèÖÃURL
-			cout << url << endl;
+			//cout << url << endl;
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
 			// ÉèÖÃRangeÍ·
@@ -143,8 +169,12 @@ public:
 		threadEnd.clear();
 		int oksum = 0;
 		int nowThread = 0;
-        long long begin = 0, end = 0;
-        long long segment_size = 1024*20;
+		long long begin = 0, end = 0;
+		if (size == -1) {
+			cout << "Error: Size is -1." << endl;
+			exit(0);
+		}
+		long long segment_size = 1024 * 1024;
 		int nowID = 1;
 		bool last = false;
 		int sum = 0;
@@ -157,62 +187,79 @@ public:
 		cout << "Number of segments:" << sum << endl;
 		//goto merge;
 		while (true) {
-			if (threads.size()<threadMax&&!last) {
-                end = begin + segment_size - 1;
-                if (end >= size) {
+			if (threads.size() < threadMax && !last) {
+				end = begin + segment_size - 1;
+				if (end >= size) {
 					end = size - 1;
 					last = true;
 					//cout << end << endl;
 				}
 				cout << begin << "-" << end << endl;
-				threads[nowID]=thread(&Download::DownloadSegment, this, begin, end, nowID);
-                threads[nowID].detach();
+				threads[nowID] = thread(&Download::DownloadSegment, this, begin, end, nowID);
+				threads[nowID].detach();
 				nowID++;
-                begin+=segment_size;
+				begin += segment_size;
 				nowThread++;
 			}
 			while (!threadEnd.empty()) {
 				if (!threadEnd.empty()) {
 					oksum++;
 					nowThread--;
-					cout << threadEnd[0]<<" is end.";
+					cout << threadEnd[0] << " is end.";
 					threads.erase(threadEnd[0]);
 					threadEnd.erase(threadEnd.begin());
 				}
 			}
-			
+
 			if (oksum >= sum) {
 				break;
 			}
+			Sleep(100);
 		}
 		Sleep(2000);
-		merge:
+	merge:
 		cout << "Merge file." << endl;
 		//nowID = 3;
-		for (int i = 1; i <= nowID-1; i++) {
-			cout<<filename + "." + to_string(i) <<endl;
-			
-			string next = filename + "." + to_string(i) ;
+		for (int i = 1; i <= nowID - 1; i++) {
+			cout << filename + "." + to_string(i) + ".CurlDownload" << endl;
+
+			string next = filename + "." + to_string(i) + ".CurlDownload";
 			if (mergeFiles(filename, next) == false) {
 				cout << "Merge Error." << endl;
 				//exit(0);
 				goto merge;
 			}
 		}
-		cout<<"Download Finish."<<endl;
+
+		remove:
+		for (int i = 1; i <= nowID - 1; i++) {
+			cout << filename + "." + to_string(i) + ".CurlDownload" << endl;
+
+			string next = filename + "." + to_string(i) + ".CurlDownload";
+			rmfile(appedd(next.c_str(), ""));
+			
+		}
+		cout << "Download Finish." << endl;
+		isok = true;
+
 	}
 	void start() {
-		if (!IsSet) {
+		if (!IsSet && size <= 0) {
 			cout << "Please set the download info first!" << endl;
 		}
 		else {
+			isok = false;
 			thread t(&Download::ThreadCheck, this);
 			t.detach();
 			//DownloadSegment(0, 255, 1);
 			cout << "Downloading" << endl;
 
-			while(true){}
-		}
+			while (true) {
+				if (isok) {
+					break;
+				}
+			}
 
+		}
 	}
 };

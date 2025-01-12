@@ -21,7 +21,9 @@ char* strToChar(std::string strSend)
 int main()
 {
 	Download download;
-    download.SetInfo("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b", "image.png", GetFileSize("https://bkimg.cdn.bcebos.com/pic/242dd42a2834349b00251014cfea15ce36d3be7b"),3);
+    
+    //download.SetInfo("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4", "example/image.mp4", GetFileSize("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4"),64);
+    download.SetInfo("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar", "example/example.jar", GetFileSize("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar"), 64);
     download.start();
 
 
