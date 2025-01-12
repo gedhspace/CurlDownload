@@ -4,6 +4,7 @@
 #include <iostream>
 #include<thread>
 #include <vector>
+#include<map>
 #include <fstream>
 
 #pragma warning(disable : 4996)
@@ -43,7 +44,7 @@ long GetFileSize(const std::string& url)
 size_t WriteData(void* ptr, size_t size, size_t nmemb, std::ofstream* stream)
 {
 	stream->write(static_cast<char*>(ptr), size * nmemb);
-	cout << ptr << endl;
+	//cout << ptr << endl;
 	return size * nmemb;
 }
 
@@ -79,7 +80,7 @@ private:
 	long long size;
 	bool IsSet = false;
 	int threadMax=64;
-    vector<thread> threads;
+    map<int,thread> threads;
 	
 public:
 	vector<int> threadEnd;
@@ -93,8 +94,8 @@ public:
 	bool DownloadSegment(long start, long end,int id){
 		this_thread::sleep_for(std::chrono::seconds(5));
 		ofstream output(filename + "." + to_string(id) + ".CurlDownload", std::ios::binary);
-		cout << filename + "." + to_string(id) + ".CurlDownload" << endl;
-		cout << start << "-" << end << endl;
+		//cout << filename + "." + to_string(id) + ".CurlDownload" << endl;
+		//cout << start << "-" << end << endl;
 
 		if (!output.is_open()) {
 			std::cerr << "Failed to open output file." << std::endl;
@@ -139,12 +140,22 @@ public:
 	}
 	void ThreadCheck() {
 		threadEnd.clear();
+		std::ofstream output(filename, std::ios::binary);
 		int oksum = 0;
 		int nowThread = 0;
         long long begin = 0, end = 0;
         long long segment_size = 1024*10;
 		int nowID = 1;
 		bool last = false;
+		int sum = 0;
+		if (size % segment_size == 0) {
+			sum = size / segment_size;
+		}
+		else {
+			sum = (size / segment_size) + 1;
+		}
+		cout << "Number of segments:" << sum << endl;
+		
 		while (true) {
 			if (threads.size()<threadMax&&!last) {
                 end = begin + segment_size - 1;
@@ -154,21 +165,23 @@ public:
 					//cout << end << endl;
 				}
 				cout << begin << "-" << end << endl;
-				threads.push_back(thread(&Download::DownloadSegment,this, begin, end, nowID));
-                threads[threads.size()-1].detach();
+				threads[nowID]=thread(&Download::DownloadSegment, this, begin, end, nowID);
+                threads[nowID].detach();
 				nowID++;
                 begin+=segment_size;
 				nowThread++;
 			}
-			for (int i = 0; i < threadEnd.size(); i++) {
-				cout<<threadEnd[i]<<" is End." << endl;
-				nowThread--;
-				oksum++;
-				threadEnd.erase(threadEnd.begin() + i);
-				//threads.erase(threads.begin() + threadEnd[i] - 1);
+			while (!threadEnd.empty()) {
+				if (!threadEnd.empty()) {
+					oksum++;
+					nowThread--;
+					cout << threadEnd[0]<<" is end.";
+					threads.erase(threadEnd[0]);
+					threadEnd.erase(threadEnd.begin());
+				}
 			}
 			
-			if (oksum >= 3) {
+			if (oksum >= sum) {
 				break;
 			}
 		}
