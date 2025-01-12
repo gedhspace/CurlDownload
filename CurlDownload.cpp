@@ -26,7 +26,7 @@ int main()
     download.SetInfo("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar", "example/example.jar", GetFileSize("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar"), 64);
     download.start();
 
-
+cout<<"Example is finish."<<endl;
 	return 0;
 }
 /*
