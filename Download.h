@@ -54,6 +54,7 @@ bool mergeFiles(const std::string& file1, const std::string& file2) {
 	std::ofstream outFile(file1, std::ios::binary | std::ios::app);
 	if (!inFile1.is_open() ) {
 		cout << "Merge:Cannot open the files(inFile1)." << endl;
+		
 		return false;
 	}
 	if (!inFile2.is_open()) {
@@ -93,7 +94,7 @@ public:
 	}
 	bool DownloadSegment(long start, long end,int id){
 		this_thread::sleep_for(std::chrono::seconds(5));
-		ofstream output(filename + "." + to_string(id) + ".CurlDownload", std::ios::binary);
+		ofstream output(filename + "." + to_string(id) , std::ios::binary);
 		//cout << filename + "." + to_string(id) + ".CurlDownload" << endl;
 		//cout << start << "-" << end << endl;
 
@@ -140,11 +141,10 @@ public:
 	}
 	void ThreadCheck() {
 		threadEnd.clear();
-		std::ofstream output(filename, std::ios::binary);
 		int oksum = 0;
 		int nowThread = 0;
         long long begin = 0, end = 0;
-        long long segment_size = 1024*10;
+        long long segment_size = 1024*20;
 		int nowID = 1;
 		bool last = false;
 		int sum = 0;
@@ -155,7 +155,7 @@ public:
 			sum = (size / segment_size) + 1;
 		}
 		cout << "Number of segments:" << sum << endl;
-		
+		//goto merge;
 		while (true) {
 			if (threads.size()<threadMax&&!last) {
                 end = begin + segment_size - 1;
@@ -186,14 +186,17 @@ public:
 			}
 		}
 		Sleep(2000);
+		merge:
 		cout << "Merge file." << endl;
-		
+		//nowID = 3;
 		for (int i = 1; i <= nowID-1; i++) {
-			cout<<filename + "." + to_string(i) + ".CurlDownload"<<endl;
-			string next = filename + "." + to_string(i) + ".CurlDownload";
+			cout<<filename + "." + to_string(i) <<endl;
+			
+			string next = filename + "." + to_string(i) ;
 			if (mergeFiles(filename, next) == false) {
 				cout << "Merge Error." << endl;
-				exit(0);
+				//exit(0);
+				goto merge;
 			}
 		}
 		cout<<"Download Finish."<<endl;
