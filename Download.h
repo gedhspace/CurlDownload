@@ -5,6 +5,7 @@
 #include<thread>
 #include <cstdio>
 #include <vector>
+#include<queue>
 #include<map>
 #include <fstream>
 #include<windows.h>
@@ -110,7 +111,26 @@ private:
 	std::map<int, thread> threads;
 	bool isok;
 public:
+	struct ProgressData {
+		int thisid; 
+	};
 	vector<int> threadEnd;
+	queue<long long> progr;
+	map<int, long long> dlast;
+	int download_progress(void* progress_data,
+		double t, /* dltotal */
+		double d, /* dlnow */
+		double ultotal,
+		double ulnow) {
+		ProgressData* pd = static_cast<ProgressData*>(progress_data);
+		std::cout << "ID: " << pd->thisid << std::endl;
+		//cout<<t<<" "<<d<<" "<<ultotal<<" "<<ulnow<<" "<<id << endl;
+		//progr.push(d - dlast[id]);
+		//cout << d - dlast[id] << endl;
+		//dlast[id] = d;
+		
+		return 0;
+	}
 	void SetInfo(std::string surl, std::string sfilename, long long ssize = 0, int smax = 64) {
 		url = surl;
 		filename = sfilename;
@@ -135,6 +155,9 @@ public:
 		if (curl) {
 			// 设置URL
 			//cout << url << endl;
+
+			ProgressData pd = { id };
+
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
 			// 设置Range头
@@ -148,6 +171,11 @@ public:
 			// 设置SSL选项
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 验证服务器的SSL证书
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // 验证证书上的主机名
+
+			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, false);
+			curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, &Download::download_progress);
+			curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &pd);
+
 
 			// 执行请求
 			res = curl_easy_perform(curl);
@@ -170,6 +198,7 @@ public:
 		int oksum = 0;
 		int nowThread = 0;
 		long long begin = 0, end = 0;
+		cout << size << endl;
 		if (size == -1) {
 			cout << "Error: Size is -1." << endl;
 			exit(0);
@@ -177,6 +206,7 @@ public:
 		long long segment_size = 1024 * 1024;
 		int nowID = 1;
 		bool last = false;
+		int nowd = 0;
 		int sum = 0;
 		if (size % segment_size == 0) {
 			sum = size / segment_size;
@@ -196,6 +226,7 @@ public:
 				}
 				cout << begin << "-" << end << endl;
 				threads[nowID] = thread(&Download::DownloadSegment, this, begin, end, nowID);
+				dlast[nowID] = 0;
 				threads[nowID].detach();
 				nowID++;
 				begin += segment_size;
@@ -210,6 +241,13 @@ public:
 					threadEnd.erase(threadEnd.begin());
 				}
 			}
+			/*
+			while(!progr.empty()){
+				nowd+= progr.front();
+				progr.pop();
+			}
+*/
+			cout << nowd <<"/"<<size << endl;
 
 			if (oksum >= sum) {
 				break;

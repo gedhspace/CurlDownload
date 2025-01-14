@@ -1,4 +1,5 @@
-﻿#include <iostream>
+﻿
+#include <iostream>
 #include <curl/curl.h>
 #include<string>
 #include "Download.h"
@@ -22,8 +23,8 @@ int main()
 {
 	Download download;
     
-    //download.SetInfo("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4", "example/image.mp4", GetFileSize("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4"),64);
-    download.SetInfo("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar", "example/example.jar", GetFileSize("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar"), 64);
+    download.SetInfo("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4", "example/image.mp4", GetFileSize("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4"),64);
+    //download.SetInfo("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar", "example/example.jar", GetFileSize("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar"), 64);
     download.start();
 
 cout<<"Example is finish."<<endl;
@@ -33,12 +34,33 @@ cout<<"Example is finish."<<endl;
 #include <iostream>
 #include <fstream>
 #include <curl/curl.h>
+#include <string>
 
+using namespace std;
 // 写入数据的回调函数
 size_t WriteData(void* ptr, size_t size, size_t nmemb, std::ofstream* stream)
 {
     stream->write(static_cast<char*>(ptr), size * nmemb);
     return size * nmemb;
+}
+
+int download_progress(char* progress_data,
+    double t, /* dltotal 
+    double d, /* dlnow 
+    double ultotal,
+    double ulnow) {
+    static char bar[120];
+    const char* lable = "|/-\\";
+    int i = 0;
+    if (t) {
+        i = d * 100.0 / t;
+    }
+    printf("%s [%-100s][%d%%][%c]\r", progress_data, bar, i, lable[i % 4]);
+    //fflush(stdout);
+    bar[i] = '>';
+    i++;
+    bar[i] = 0;
+    return 0;
 }
 
 // 分段下载函数
@@ -58,6 +80,9 @@ bool DownloadSegment(const std::string& url, std::ofstream& output, long start, 
         // 设置写入数据的回调函数
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteData);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &output);
+
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, false);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, download_progress);
 
         // 设置SSL选项
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 验证服务器的SSL证书
@@ -155,5 +180,5 @@ int main() {
 
     return 0;
 }
-
 */
+
