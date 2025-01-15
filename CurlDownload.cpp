@@ -23,7 +23,8 @@ int main()
 {
 	Download download;
     
-    download.SetInfo("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4", "example/image.mp4", GetFileSize("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4"),64);
+    //download.SetInfo("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4", "example/image.mp4", GetFileSize("https://ojproxy.gedh2011.us.kg/https://github.com/gedhspace/CurlDownload/releases/download/1.0/4K.60FPS.6.flv.mp4"),64);
+    download.SetInfo("https://ojproxy.gedh2011.us.kg/https://github.com/2dust/v2rayN/releases/download/7.5.6/v2rayN-windows-64-With-Core.zip", "example/eaxmple.zip", GetFileSize("https://ojproxy.gedh2011.us.kg/https://github.com/2dust/v2rayN/releases/download/7.5.6/v2rayN-windows-64-With-Core.zip"), 128);
     //download.SetInfo("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar", "example/example.jar", GetFileSize("https://piston-data.mojang.com/v1/objects/5dc770c10d3769f9f3437a2bd7029b10b9c0d780/client.jar"), 64);
     download.start();
 

@@ -110,6 +110,7 @@ private:
 	int threadMax = 64;
 	std::map<int, thread> threads;
 	bool isok;
+	long long nowd = 0;
 public:
 	struct ProgressData {
 		int thisid; 
@@ -156,8 +157,6 @@ public:
 			// 设置URL
 			//cout << url << endl;
 
-			ProgressData pd = { id };
-
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
 			// 设置Range头
@@ -172,9 +171,9 @@ public:
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 验证服务器的SSL证书
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // 验证证书上的主机名
 
-			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, false);
-			curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, &Download::download_progress);
-			curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &pd);
+			//curl_easy_setopt(curl, CURLOPT_NOPROGRESS, false);
+			//curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, &Download::download_progress);
+			//curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &pd);
 
 
 			// 执行请求
@@ -206,7 +205,6 @@ public:
 		long long segment_size = 1024 * 1024;
 		int nowID = 1;
 		bool last = false;
-		int nowd = 0;
 		int sum = 0;
 		if (size % segment_size == 0) {
 			sum = size / segment_size;
@@ -237,8 +235,15 @@ public:
 					oksum++;
 					nowThread--;
 					cout << threadEnd[0] << " is end.";
+					if (threadEnd[0] != sum) {
+						nowd += segment_size;
+					}
+					else {
+						nowd += size % segment_size;
+					}
 					threads.erase(threadEnd[0]);
 					threadEnd.erase(threadEnd.begin());
+					
 				}
 			}
 			/*
@@ -247,14 +252,14 @@ public:
 				progr.pop();
 			}
 */
-			cout << nowd <<"/"<<size << endl;
+			cout << nowd * 1.0 / size * 1.0 * 100<<"%" << endl;
 
 			if (oksum >= sum) {
 				break;
 			}
 			Sleep(100);
 		}
-		Sleep(2000);
+		Sleep(200);
 	merge:
 		cout << "Merge file." << endl;
 		//nowID = 3;
