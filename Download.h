@@ -100,20 +100,9 @@ char* appedd(const char* a, const char* b) {
 	return result;
 }
 
-int download_progress(void* clientp,
-	double t, /* dltotal */
-	double d, /* dlnow */
-	double ultotal,
-	double ulnow) {
-	int* progressData = static_cast<int*>(clientp);
-	cout << *progressData << endl;
-	//cout<<t<<" "<<d<<" "<<ultotal<<" "<<ulnow<<" "<<id << endl;
-	//progr.push(d - dlast[id]);
-	//cout << d - dlast[id] << endl;
-	//dlast[id] = d;
 
-	return 0;
-}
+
+
 
 class Download {
 
@@ -127,12 +116,11 @@ private:
 	bool isok;
 	long long nowd = 0;
 public:
-	struct ProgressData {
-		int thisid; 
-	};
+	
 	vector<int> threadEnd;
 	queue<long long> progr;
 	map<int, long long> dlast;
+	map<int, int> threadsTime;
 	void SetInfo(std::string surl, std::string sfilename, long long ssize = 0, int smax = 64) {
 		url = surl;
 		filename = sfilename;
@@ -158,8 +146,6 @@ public:
 			// 设置URL
 			//cout << url << endl;
 
-			ProgressData pd;
-			pd.thisid = id;
 
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
@@ -175,9 +161,9 @@ public:
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 验证服务器的SSL证书
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // 验证证书上的主机名
 
-			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, false);
-			curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, download_progress);
-			curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &id);
+			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, true);
+			//curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, download_progress);
+			//curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &id);
 
 
 			// 执行请求
@@ -187,7 +173,7 @@ public:
 			curl_easy_cleanup(curl);
 
 			if (res != CURLE_OK) {
-				std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+				std::cerr << id<<"curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
 				return false;
 			}
 			output.close();
@@ -196,12 +182,39 @@ public:
 		}
 		return false;
 	}
+	void displayProgressBar(int progress) {
+		int barWidth = 70;
+		std::cout << "[";
+		int pos = barWidth * progress / 100;
+		for (int i = 0; i < barWidth; ++i) {
+			if (i < pos) std::cout << "=";
+			else if (i == pos) std::cout << ">";
+			else std::cout << " ";
+		}
+		std::cout << "] " << progress << "%\r";
+		std::cout.flush();
+	}
+
+	void TimeCheck() {
+		while (true) {
+			for (auto& i : threadsTime) {
+				threadsTime[i.first]++;
+				if (threadsTime[i.first] > 30) {
+					cout << "Thread " << i.first << " is timeout.Now use "<< threadsTime[i.first]<<"s." << endl;
+
+				}
+			}
+			Sleep(1000);
+		}
+	}
+
 	void ThreadCheck() {
 		threadEnd.clear();
+		thread(&Download::TimeCheck,this).detach();
 		int oksum = 0;
 		int nowThread = 0;
 		long long begin = 0, end = 0;
-		cout << size << endl;
+		//cout << size << endl;
 		if (size == -1) {
 			cout << "Error: Size is -1." << endl;
 			exit(0);
@@ -226,10 +239,11 @@ public:
 					last = true;
 					//cout << end << endl;
 				}
-				cout << begin << "-" << end << endl;
+				//cout << begin << "-" << end << endl;
 				threads[nowID] = thread(&Download::DownloadSegment, this, begin, end, nowID);
 				dlast[nowID] = 0;
 				threads[nowID].detach();
+				threadsTime[nowID] = 0;
 				nowID++;
 				begin += segment_size;
 				nowThread++;
@@ -238,16 +252,18 @@ public:
 				if (!threadEnd.empty()) {
 					oksum++;
 					nowThread--;
-					cout << threadEnd[0] << " is end.";
+					//cout << threadEnd[0] << " is end.";
+					
 					if (threadEnd[0] != sum) {
 						nowd += segment_size;
 					}
 					else {
 						nowd += size % segment_size;
 					}
+					cout<< "Thread " << threadEnd[0] << " is end.Use"<<threadsTime[threadEnd[0]]<<"s." << endl;
 					threads.erase(threadEnd[0]);
 					threadEnd.erase(threadEnd.begin());
-					
+					threadsTime.erase(threadEnd[0]);
 				}
 			}
 			/*
@@ -255,8 +271,9 @@ public:
 				nowd+= progr.front();
 				progr.pop();
 			}
-*/
-			cout << nowd * 1.0 / size * 1.0 * 100<<"%" << endl;
+*/	
+			displayProgressBar(int(nowd * 1.0 / size * 1.0 * 100));
+			//cout << nowd * 1.0 / size * 1.0 * 100<<"%" << endl;
 
 			if (oksum >= sum) {
 				break;
@@ -290,6 +307,7 @@ public:
 		isok = true;
 
 	}
+	
 	void start() {
 
 		if (!IsSet && size <= 0) {
@@ -316,3 +334,5 @@ public:
 		}
 	}
 };
+
+
