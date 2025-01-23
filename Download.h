@@ -100,6 +100,21 @@ char* appedd(const char* a, const char* b) {
 	return result;
 }
 
+int download_progress(void* clientp,
+	double t, /* dltotal */
+	double d, /* dlnow */
+	double ultotal,
+	double ulnow) {
+	int* progressData = static_cast<int*>(clientp);
+	cout << *progressData << endl;
+	//cout<<t<<" "<<d<<" "<<ultotal<<" "<<ulnow<<" "<<id << endl;
+	//progr.push(d - dlast[id]);
+	//cout << d - dlast[id] << endl;
+	//dlast[id] = d;
+
+	return 0;
+}
+
 class Download {
 
 private:
@@ -118,20 +133,6 @@ public:
 	vector<int> threadEnd;
 	queue<long long> progr;
 	map<int, long long> dlast;
-	int download_progress(void* progress_data,
-		double t, /* dltotal */
-		double d, /* dlnow */
-		double ultotal,
-		double ulnow) {
-		ProgressData* pd = static_cast<ProgressData*>(progress_data);
-		std::cout << "ID: " << pd->thisid << std::endl;
-		//cout<<t<<" "<<d<<" "<<ultotal<<" "<<ulnow<<" "<<id << endl;
-		//progr.push(d - dlast[id]);
-		//cout << d - dlast[id] << endl;
-		//dlast[id] = d;
-		
-		return 0;
-	}
 	void SetInfo(std::string surl, std::string sfilename, long long ssize = 0, int smax = 64) {
 		url = surl;
 		filename = sfilename;
@@ -157,6 +158,9 @@ public:
 			// 设置URL
 			//cout << url << endl;
 
+			ProgressData pd;
+			pd.thisid = id;
+
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
 			// 设置Range头
@@ -171,9 +175,9 @@ public:
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 验证服务器的SSL证书
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // 验证证书上的主机名
 
-			//curl_easy_setopt(curl, CURLOPT_NOPROGRESS, false);
-			//curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, &Download::download_progress);
-			//curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &pd);
+			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, false);
+			curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, download_progress);
+			curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &id);
 
 
 			// 执行请求
@@ -282,11 +286,12 @@ public:
 			rmfile(appedd(next.c_str(), ""));
 			
 		}
-		cout << "Download Finish." << endl;
+		//cout << "Download Finish." << endl;
 		isok = true;
 
 	}
 	void start() {
+
 		if (!IsSet && size <= 0) {
 			cout << "Please set the download info first!" << endl;
 		}
@@ -294,6 +299,7 @@ public:
 			isok = false;
 			thread t(&Download::ThreadCheck, this);
 			t.detach();
+			long long time = 0;
 			//DownloadSegment(0, 255, 1);
 			cout << "Downloading" << endl;
 
@@ -301,7 +307,11 @@ public:
 				if (isok) {
 					break;
 				}
+				Sleep(1000);
+				time++;
 			}
+
+			cout << "Download Finish.Use " << time << "s." << endl;
 
 		}
 	}
