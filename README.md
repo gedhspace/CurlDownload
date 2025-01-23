@@ -4,7 +4,7 @@
 # How to use
 include CurlDownload.h
 
-# 示例
+# Example
 Look to CurlDownload.cpp
 
 # Give me a Star
