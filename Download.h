@@ -121,6 +121,9 @@ public:
 	queue<long long> progr;
 	map<int, long long> dlast;
 	map<int, int> threadsTime;
+	long long segment_size = 1024 * 5;
+	int nowThread = 0;
+	int oksum = 0;
 	void SetInfo(std::string surl, std::string sfilename, long long ssize = 0, int smax = 64) {
 		url = surl;
 		filename = sfilename;
@@ -195,13 +198,37 @@ public:
 		std::cout.flush();
 	}
 
+	void threadRetry(int id) {
+		int begin, end;
+		begin = (id - 1) * segment_size;
+		end = begin + segment_size - 1;
+		if (end >= size) {
+			end = size - 1;
+		}
+		cout << "Thread " << id << " is timeout.Now use " << threadsTime[id] << "s." << begin << "-" << end << endl;
+		threadEnd.push_back(id);
+		while (true) {
+			if (threads.find(id) == threads.end()) {
+				cout << "Remove ok." << endl;
+				oksum--;
+				threads[id] = thread(&Download::DownloadSegment, this, begin, end, id);
+				dlast[id] = 0;
+				threads[id].detach();
+				threadsTime[id] = 0;
+				nowThread++;
+			}
+		}
+		
+		
+	}
+
 	void TimeCheck() {
 		while (true) {
 			for (auto& i : threadsTime) {
 				threadsTime[i.first]++;
-				if (threadsTime[i.first] > 30) {
-					cout << "Thread " << i.first << " is timeout.Now use "<< threadsTime[i.first]<<"s." << endl;
-
+				if (threadsTime[i.first] > 1) {
+					int rm = i.first;
+					thread(&Download::threadRetry,this, rm);
 				}
 			}
 			Sleep(1000);
@@ -211,15 +238,14 @@ public:
 	void ThreadCheck() {
 		threadEnd.clear();
 		thread(&Download::TimeCheck,this).detach();
-		int oksum = 0;
-		int nowThread = 0;
+		
+		
 		long long begin = 0, end = 0;
 		//cout << size << endl;
 		if (size == -1) {
 			cout << "Error: Size is -1." << endl;
 			exit(0);
 		}
-		long long segment_size = 1024 * 1024;
 		int nowID = 1;
 		bool last = false;
 		int sum = 0;
@@ -252,6 +278,7 @@ public:
 				if (!threadEnd.empty()) {
 					oksum++;
 					nowThread--;
+					int rmid = threadEnd[0];
 					//cout << threadEnd[0] << " is end.";
 					
 					if (threadEnd[0] != sum) {
@@ -260,10 +287,11 @@ public:
 					else {
 						nowd += size % segment_size;
 					}
-					cout<< "Thread " << threadEnd[0] << " is end.Use"<<threadsTime[threadEnd[0]]<<"s." << endl;
-					threads.erase(threadEnd[0]);
+					cout<< "Thread " << rmid << " is end.Use"<<threadsTime[rmid]<<"s." << endl;
+					threads.erase(rmid);
+					threadsTime.erase(rmid);
 					threadEnd.erase(threadEnd.begin());
-					threadsTime.erase(threadEnd[0]);
+					
 				}
 			}
 			/*
