@@ -102,7 +102,23 @@ char* appedd(const char* a, const char* b) {
 
 
 
+struct progressData {
+	long long progress;
+	bool isend = false;
+	int id;
+};
+int progressCallback(void* clientp,
+	double dltotal,
+	double dlnow,
+	double ultotal,
+	double ulnow) {
 
+	progressData* data = static_cast<progressData*>(clientp);
+	data->progress = static_cast<int>(dlnow);
+	//cout << data->progress << endl;;
+
+	return 0;
+}
 
 class Download {
 
@@ -114,22 +130,33 @@ private:
 	int threadMax = 64;
 	std::map<int, thread> threads;
 	bool isok;
-	long long nowd = 0;
 public:
-	
+	long long nowd = 0;
 	vector<int> threadEnd;
 	queue<long long> progr;
 	map<int, long long> dlast;
-	map<int, int> threadsTime;
-	long long segment_size = 1024 * 5;
+	long long segment_size = 1024 * 1024;
 	int nowThread = 0;
 	int oksum = 0;
+
 	void SetInfo(std::string surl, std::string sfilename, long long ssize = 0, int smax = 64) {
 		url = surl;
 		filename = sfilename;
 		size = ssize;
 		threadMax = smax;
 		IsSet = true;
+	}
+	void progress_check(progressData* Data1) {
+		while (true) {
+			if(Data1->isend){
+				break;
+			}
+			int out=Data1->progress;
+			int id= Data1->id;
+			progr.push(out-dlast[id]);
+			dlast[id] = out;
+		}
+		
 	}
 	bool DownloadSegment(long start, long end, int id) {
 		std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -149,6 +176,8 @@ public:
 			// 设置URL
 			//cout << url << endl;
 
+			progressData data;
+			data.id = id;
 
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
@@ -164,11 +193,11 @@ public:
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 验证服务器的SSL证书
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // 验证证书上的主机名
 
-			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, true);
-			//curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, download_progress);
-			//curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &id);
+			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+			curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
+			curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &data);
 
-
+			thread(&Download::progress_check, this, &data).detach();
 			// 执行请求
 			res = curl_easy_perform(curl);
 
@@ -176,11 +205,16 @@ public:
 			curl_easy_cleanup(curl);
 
 			if (res != CURLE_OK) {
-				std::cerr << id<<"curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+				fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 				return false;
 			}
+			else {
+				//printf("Download progress: %d%%\n", data.progress); // 使用回调中更新的进度信息
+			}
 			output.close();
+			data.isend = true;
 			threadEnd.push_back(id);
+			cout << "return" << endl;
 			return true;
 		}
 		return false;
@@ -198,47 +232,10 @@ public:
 		std::cout.flush();
 	}
 
-	void threadRetry(int id) {
-		int begin, end;
-		begin = (id - 1) * segment_size;
-		end = begin + segment_size - 1;
-		if (end >= size) {
-			end = size - 1;
-		}
-		cout << "Thread " << id << " is timeout.Now use " << threadsTime[id] << "s." << begin << "-" << end << endl;
-		threadEnd.push_back(id);
-		while (true) {
-			if (threads.find(id) == threads.end()) {
-				cout << "Remove ok." << endl;
-				oksum--;
-				threads[id] = thread(&Download::DownloadSegment, this, begin, end, id);
-				dlast[id] = 0;
-				threads[id].detach();
-				threadsTime[id] = 0;
-				nowThread++;
-			}
-		}
-		
-		
-	}
-
-	void TimeCheck() {
-		while (true) {
-			for (auto& i : threadsTime) {
-				threadsTime[i.first]++;
-				if (threadsTime[i.first] > 1) {
-					int rm = i.first;
-					thread(&Download::threadRetry,this, rm);
-				}
-			}
-			Sleep(1000);
-		}
-	}
-
 	void ThreadCheck() {
 		threadEnd.clear();
-		thread(&Download::TimeCheck,this).detach();
-		
+		//thread(&Download::TimeCheck,this).detach();
+		//thread(&Download::Timecount, this).detach();
 		
 		long long begin = 0, end = 0;
 		//cout << size << endl;
@@ -269,7 +266,7 @@ public:
 				threads[nowID] = thread(&Download::DownloadSegment, this, begin, end, nowID);
 				dlast[nowID] = 0;
 				threads[nowID].detach();
-				threadsTime[nowID] = 0;
+				//threadsTime[nowID] = 0;
 				nowID++;
 				begin += segment_size;
 				nowThread++;
@@ -280,26 +277,28 @@ public:
 					nowThread--;
 					int rmid = threadEnd[0];
 					//cout << threadEnd[0] << " is end.";
-					
+					/*
 					if (threadEnd[0] != sum) {
 						nowd += segment_size;
 					}
 					else {
 						nowd += size % segment_size;
-					}
-					cout<< "Thread " << rmid << " is end.Use"<<threadsTime[rmid]<<"s." << endl;
+					}*/
+					//cout<< "Thread " << rmid << " is end.Use"<<threadsTime[rmid]<<"s." << endl;
 					threads.erase(rmid);
-					threadsTime.erase(rmid);
+					//threadsTime.erase(rmid);
 					threadEnd.erase(threadEnd.begin());
 					
 				}
 			}
-			/*
+			
 			while(!progr.empty()){
-				nowd+= progr.front();
+				long long add = progr.front();
+				//cout<<progr.front() <<endl;
+				nowd+= add;
 				progr.pop();
 			}
-*/	
+			
 			displayProgressBar(int(nowd * 1.0 / size * 1.0 * 100));
 			//cout << nowd * 1.0 / size * 1.0 * 100<<"%" << endl;
 
@@ -309,7 +308,7 @@ public:
 			Sleep(100);
 		}
 		Sleep(200);
-	merge:
+		merge:
 		cout << "Merge file." << endl;
 		//nowID = 3;
 		for (int i = 1; i <= nowID - 1; i++) {
