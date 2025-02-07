@@ -57,9 +57,9 @@ bool mergeFiles(const std::string& file1, const std::string& file2) {
 	std::ifstream inFile1(file1, std::ios::binary);
 	std::ifstream inFile2(file2, std::ios::binary);
 	std::ofstream outFile(file1, std::ios::binary | std::ios::app);
-	if (!inFile1.is_open() ) {
+	if (!inFile1.is_open()) {
 		cout << "Merge:Cannot open the files(inFile1)." << endl;
-		
+
 		return false;
 	}
 	if (!inFile2.is_open()) {
@@ -133,7 +133,7 @@ private:
 public:
 	long long nowd = 0;
 	vector<int> threadEnd;
-	queue<long long> progr;
+	vector<long long> progr;
 	map<int, long long> dlast;
 	long long segment_size = 1024 * 1024;
 	int nowThread = 0;
@@ -148,15 +148,20 @@ public:
 	}
 	void progress_check(progressData* Data1) {
 		while (true) {
-			if(Data1->isend){
+			//int isend = Data1->isend;
+			cout << endl;
+			
+			if (Data1->isend==true) {
+				//cout <<"is end." << endl;
 				break;
 			}
-			int out=Data1->progress;
-			int id= Data1->id;
-			progr.push(out-dlast[id]);
+			int out = Data1->progress;
+			int id = Data1->id;
+			progr.push_back(out - dlast[id]);
+			//cout << "add "<<out - dlast[id] << endl;
 			dlast[id] = out;
 		}
-		
+
 	}
 	bool DownloadSegment(long start, long end, int id) {
 		std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -214,7 +219,8 @@ public:
 			output.close();
 			data.isend = true;
 			threadEnd.push_back(id);
-			cout << "return" << endl;
+			cout << id<<"return" << endl;
+			Sleep(500);
 			return true;
 		}
 		return false;
@@ -236,7 +242,7 @@ public:
 		threadEnd.clear();
 		//thread(&Download::TimeCheck,this).detach();
 		//thread(&Download::Timecount, this).detach();
-		
+
 		long long begin = 0, end = 0;
 		//cout << size << endl;
 		if (size == -1) {
@@ -276,6 +282,7 @@ public:
 					oksum++;
 					nowThread--;
 					int rmid = threadEnd[0];
+					cout << rmid << endl;
 					//cout << threadEnd[0] << " is end.";
 					/*
 					if (threadEnd[0] != sum) {
@@ -288,17 +295,18 @@ public:
 					threads.erase(rmid);
 					//threadsTime.erase(rmid);
 					threadEnd.erase(threadEnd.begin());
-					
+
 				}
 			}
-			
-			while(!progr.empty()){
-				long long add = progr.front();
+
+			while (!progr.empty()) {
+				//cout << progr.size() << endl;
+				long long add = progr[0];
 				//cout<<progr.front() <<endl;
-				nowd+= add;
-				progr.pop();
+				nowd += add;
+				progr.erase(progr.begin());
 			}
-			
+
 			displayProgressBar(int(nowd * 1.0 / size * 1.0 * 100));
 			//cout << nowd * 1.0 / size * 1.0 * 100<<"%" << endl;
 
@@ -308,7 +316,9 @@ public:
 			Sleep(100);
 		}
 		Sleep(200);
-		merge:
+		displayProgressBar(int(nowd * 1.0 / size * 1.0 * 100));
+	merge:
+		
 		cout << "Merge file." << endl;
 		//nowID = 3;
 		for (int i = 1; i <= nowID - 1; i++) {
@@ -322,19 +332,19 @@ public:
 			}
 		}
 
-		remove:
+	remove:
 		for (int i = 1; i <= nowID - 1; i++) {
 			cout << filename + "." + to_string(i) + ".CurlDownload" << endl;
 
 			string next = filename + "." + to_string(i) + ".CurlDownload";
 			rmfile(appedd(next.c_str(), ""));
-			
+
 		}
 		//cout << "Download Finish." << endl;
 		isok = true;
 
 	}
-	
+
 	void start() {
 
 		if (!IsSet && size <= 0) {
@@ -361,5 +371,3 @@ public:
 		}
 	}
 };
-
-
