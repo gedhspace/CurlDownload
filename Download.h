@@ -101,7 +101,7 @@ char* appedd(const char* a, const char* b) {
 }
 
 
-
+/*
 struct progressData {
 	long long progress;
 	bool isend = false;
@@ -119,7 +119,7 @@ int progressCallback(void* clientp,
 
 	return 0;
 }
-
+*/
 class Download {
 
 private:
@@ -135,7 +135,7 @@ public:
 	vector<int> threadEnd;
 	vector<long long> progr;
 	map<int, long long> dlast;
-	long long segment_size = 1024 * 1024;
+	long long segment_size = 1024 * 1024*3;//3MB
 	int nowThread = 0;
 	int oksum = 0;
 
@@ -146,6 +146,7 @@ public:
 		threadMax = smax;
 		IsSet = true;
 	}
+	/*
 	void progress_check(progressData* Data1) {
 		while (true) {
 			//int isend = Data1->isend;
@@ -162,7 +163,7 @@ public:
 			dlast[id] = out;
 		}
 
-	}
+	}*/
 	bool DownloadSegment(long start, long end, int id) {
 		std::this_thread::sleep_for(std::chrono::seconds(5));
 		std::ofstream output(filename + "." + std::to_string(id) + ".CurlDownload", std::ios::binary);
@@ -181,8 +182,8 @@ public:
 			// 设置URL
 			//cout << url << endl;
 
-			progressData data;
-			data.id = id;
+			//progressData data;
+			//data.id = id;
 
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
@@ -198,11 +199,11 @@ public:
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // 验证服务器的SSL证书
 			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L); // 验证证书上的主机名
 
-			curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-			curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
-			curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &data);
+			//curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+			//curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
+			//curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &data);
 
-			thread(&Download::progress_check, this, &data).detach();
+			//thread(&Download::progress_check, this, &data).detach();
 			// 执行请求
 			res = curl_easy_perform(curl);
 
@@ -217,15 +218,15 @@ public:
 				//printf("Download progress: %d%%\n", data.progress); // 使用回调中更新的进度信息
 			}
 			output.close();
-			data.isend = true;
+			//data.isend = true;
 			threadEnd.push_back(id);
-			cout << id<<"return" << endl;
+			//cout << id<<"return" << endl;
 			Sleep(500);
 			return true;
 		}
 		return false;
 	}
-	void displayProgressBar(int progress) {
+	void displayProgressBar(int progress,long long speed,int nowthreadpr) {
 		int barWidth = 70;
 		std::cout << "[";
 		int pos = barWidth * progress / 100;
@@ -234,7 +235,7 @@ public:
 			else if (i == pos) std::cout << ">";
 			else std::cout << " ";
 		}
-		std::cout << "] " << progress << "%\r";
+		std::cout << "] " << progress << "% speed: " << (speed / 1024/1024) << " MB Running:"<<nowthreadpr<<" \r";
 		std::cout.flush();
 	}
 
@@ -251,6 +252,7 @@ public:
 		}
 		int nowID = 1;
 		bool last = false;
+		long long lastp = 0;
 		int sum = 0;
 		if (size % segment_size == 0) {
 			sum = size / segment_size;
@@ -282,15 +284,15 @@ public:
 					oksum++;
 					nowThread--;
 					int rmid = threadEnd[0];
-					cout << rmid << endl;
+					//cout << rmid << endl;
 					//cout << threadEnd[0] << " is end.";
-					/*
+					
 					if (threadEnd[0] != sum) {
 						nowd += segment_size;
 					}
 					else {
 						nowd += size % segment_size;
-					}*/
+					}
 					//cout<< "Thread " << rmid << " is end.Use"<<threadsTime[rmid]<<"s." << endl;
 					threads.erase(rmid);
 					//threadsTime.erase(rmid);
@@ -298,7 +300,7 @@ public:
 
 				}
 			}
-
+			/*
 			while (!progr.empty()) {
 				//cout << progr.size() << endl;
 				long long add = progr[0];
@@ -306,17 +308,20 @@ public:
 				nowd += add;
 				progr.erase(progr.begin());
 			}
+*/
+			displayProgressBar(int(nowd * 1.0 / size * 1.0 * 100),nowd-lastp,nowThread);
+			lastp = nowd;
 
-			displayProgressBar(int(nowd * 1.0 / size * 1.0 * 100));
+			//displayProgressBar(int(nowd * 1.0 / size * 1.0 * 100));
 			//cout << nowd * 1.0 / size * 1.0 * 100<<"%" << endl;
 
 			if (oksum >= sum) {
 				break;
 			}
-			Sleep(100);
+			Sleep(500);
 		}
 		Sleep(200);
-		displayProgressBar(int(nowd * 1.0 / size * 1.0 * 100));
+		displayProgressBar(int(nowd * 1.0 / size * 1.0 * 100), nowd - lastp,nowThread);
 	merge:
 		
 		cout << "Merge file." << endl;
